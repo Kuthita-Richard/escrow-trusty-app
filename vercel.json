@@ -3,7 +3,6 @@
   "installCommand": "npm install --legacy-peer-deps",
   "outputDirectory": "dist",
   "framework": "vite",
-  "nodeVersion": "18.x",
   "env": {
     "VITE_FIREBASE_API_KEY": {
       "description": "Firebase API Key - Get from Firebase Console",
