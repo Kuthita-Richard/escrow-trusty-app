@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/kUTHITA/Desktop/Kuthita_files/trusty-escrow-main/src/pages/NotFound.tsx"],"sourcesContent":["\"use client\";\n\nexport function NotFound() {\n\n  return (\n    <div className=\"flex min-h-screen items-center justify-center bg-muted\">\n      <div className=\"text-center\">\n        <h1 className=\"mb-4 text-4xl font-bold\">404</h1>\n        <p className=\"mb-4 text-xl text-muted-foreground\">Oops! Page not found</p>\n        <a href=\"/\" className=\"text-primary underline hover:text-primary/90\">\n          Return to Home\n        </a>\n      </div>\n    </div>\n  );\n}\n"],"names":[],"mappings":";;;;;AAAA;;AAEO,SAAS;IAEd,qBACE,8OAAC;QAAI,WAAU;kBACb,cAAA,8OAAC;YAAI,WAAU;;8BACb,8OAAC;oBAAG,WAAU;8BAA0B;;;;;;8BACxC,8OAAC;oBAAE,WAAU;8BAAqC;;;;;;8BAClD,8OAAC;oBAAE,MAAK;oBAAI,WAAU;8BAA+C;;;;;;;;;;;;;;;;;AAM7E"}},
-    {"offset": {"line": 58, "column": 0}, "map": {"version":3,"sources":["file:///C:/Users/kUTHITA/Desktop/Kuthita_files/trusty-escrow-main/node_modules/next/src/server/route-modules/app-page/vendored/ssr/react-jsx-dev-runtime.ts"],"sourcesContent":["module.exports = (\n  require('../../module.compiled') as typeof import('../../module.compiled')\n).vendored['react-ssr']!.ReactJsxDevRuntime\n"],"names":["module","exports","require","vendored","ReactJsxDevRuntime"],"mappings":"AAAAA,OAAOC,OAAO,GACZC,QAAQ,4HACRC,QAAQ,CAAC,YAAY,CAAEC,kBAAkB","ignoreList":[0]}}]
-}
