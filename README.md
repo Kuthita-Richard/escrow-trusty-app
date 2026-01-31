@@ -40,3 +40,5 @@ NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 ```
 
 Then use the helpers in `src/lib/firebase.ts` (for example `getFirestoreDb()`, `getFirebaseAuth()`) from your server components, route handlers, or client components to read/write real data instead of the dummy data.
+
+# escrow-trusty-app
