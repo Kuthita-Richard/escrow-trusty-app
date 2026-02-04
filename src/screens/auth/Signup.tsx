@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +11,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Checkbox } from "@/components/ui/checkbox";
 import { Shield, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getFirebaseAuth } from "@/lib/firebase";
+import { createUserProfile } from "@/lib/firestore/users";
 
 export function Signup() {
   const [name, setName] = useState("");
@@ -45,15 +48,30 @@ export function Signup() {
 
     setIsLoading(true);
 
-    // Simulate signup
-    setTimeout(() => {
+    try {
+      const auth = getFirebaseAuth();
+      const { user } = await createUserWithEmailAndPassword(auth, email, password);
+      await updateProfile(user, { displayName: name });
+      await createUserProfile(user.uid, {
+        email,
+        name,
+        role: "user",
+      });
       toast({
         title: "Account created!",
-        description: "Please verify your email to continue.",
+        description: "Welcome to Trusty Escrow.",
       });
+      router.push("/dashboard");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Sign up failed. Please try again.";
+      toast({
+        title: "Sign up failed",
+        description: msg,
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-      router.push("/verify-phone");
-    }, 1000);
+    }
   };
 
   return (
@@ -61,7 +79,7 @@ export function Signup() {
       <div className="w-full max-w-md">
         <Link href="/" className="flex items-center justify-center gap-2 mb-8">
           <Shield className="h-8 w-8 text-primary" />
-          <span className="text-2xl font-bold">SecureEscrow</span>
+          <span className="text-2xl font-bold">Trusty Escrow</span>
         </Link>
 
         <Card>
@@ -146,7 +164,7 @@ export function Signup() {
                 </Label>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col gap-4">
+            <CardFooter className="flex-col gap-4 flex">
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Creating account..." : "Create Account"}
               </Button>
@@ -165,4 +183,3 @@ export function Signup() {
 }
 
 export default Signup;
-

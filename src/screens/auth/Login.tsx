@@ -3,12 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getFirebaseAuth } from "@/lib/firebase";
 
 export function Login() {
   const [email, setEmail] = useState("");
@@ -18,41 +20,28 @@ export function Login() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const ADMIN_EMAIL = "admin@demo.trustyescrow";
-  const ADMIN_PASSWORD = "Admin123!";
-  const USER_EMAIL = "user@demo.trustyescrow";
-  const USER_PASSWORD = "User123!";
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Temporary dummy authentication until real backend is connected
-    setTimeout(() => {
-      const isAdmin = email === ADMIN_EMAIL && password === ADMIN_PASSWORD;
-      const isUser = email === USER_EMAIL && password === USER_PASSWORD;
-
-      if (!isAdmin && !isUser) {
-        toast({
-          title: "Invalid credentials",
-          description:
-            "Use the demo accounts: admin@demo.trustyescrow / Admin123! or user@demo.trustyescrow / User123!.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
+    try {
+      const auth = getFirebaseAuth();
+      await signInWithEmailAndPassword(auth, email, password);
       toast({
-        title: isAdmin ? "Welcome back, admin" : "Welcome back",
-        description: isAdmin
-          ? "You are signed in as an admin with full access to the dashboard."
-          : "You are signed in as a demo user.",
+        title: "Welcome back",
+        description: "You are signed in successfully.",
       });
-
+      router.push("/dashboard");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Invalid email or password.";
+      toast({
+        title: "Sign in failed",
+        description: msg,
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-      router.push(isAdmin ? "/admin" : "/dashboard");
-    }, 700);
+    }
   };
 
   return (
@@ -60,7 +49,7 @@ export function Login() {
       <div className="w-full max-w-md">
         <Link href="/" className="flex items-center justify-center gap-2 mb-8">
           <Shield className="h-8 w-8 text-primary" />
-          <span className="text-2xl font-bold">SecureEscrow</span>
+          <span className="text-2xl font-bold">Trusty Escrow</span>
         </Link>
 
         <Card>
@@ -109,7 +98,7 @@ export function Login() {
                 </div>
               </div>
             </CardContent>
-            <CardFooter className="flex flex-col gap-4">
+            <CardFooter className="flex-col gap-4 flex">
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? "Signing in..." : "Sign In"}
               </Button>
@@ -128,4 +117,3 @@ export function Login() {
 }
 
 export default Login;
-
