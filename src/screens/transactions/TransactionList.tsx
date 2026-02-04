@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,19 +10,35 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Search, Plus, ArrowUpRight, ArrowDownLeft } from "lucide-react";
 import {
-  currentUser,
-  getTransactionsByUser,
   formatCurrency,
   formatDate,
   getTransactionStatusColor,
   type Transaction,
 } from "@/lib/dummy-data";
+import { useAuth } from "@/lib/auth-context";
+import { getTransactionsByUser } from "@/lib/firestore/transactions";
 
 export function TransactionList() {
-  const user = currentUser;
-  const allTransactions = getTransactionsByUser(user.id);
+  const { user } = useAuth();
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+
+  useEffect(() => {
+    let cancelled = false;
+    async function run() {
+      if (!user) return;
+      setLoading(true);
+      const txns = await getTransactionsByUser(user.id);
+      if (!cancelled) setAllTransactions(txns);
+      if (!cancelled) setLoading(false);
+    }
+    run().catch(() => setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const filterTransactions = (transactions: Transaction[]) => {
     let filtered = transactions;
@@ -49,7 +65,11 @@ export function TransactionList() {
     return filtered;
   };
 
-  const filteredTransactions = filterTransactions(allTransactions);
+  const filteredTransactions = useMemo(
+    () => filterTransactions(allTransactions),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allTransactions, searchQuery, activeTab],
+  );
 
   return (
     <DashboardLayout>
@@ -112,7 +132,9 @@ export function TransactionList() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {filteredTransactions.length === 0 ? (
+            {loading ? (
+              <div className="text-center py-12 text-muted-foreground">Loading transactions...</div>
+            ) : filteredTransactions.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-muted-foreground mb-4">No transactions found</p>
                 <Button asChild>
@@ -122,7 +144,7 @@ export function TransactionList() {
             ) : (
               <div className="space-y-4">
                 {filteredTransactions.map((transaction) => {
-                  const isBuyer = transaction.buyerId === user.id;
+                  const isBuyer = transaction.buyerId === user?.id;
                   return (
                     <Link
                       key={transaction.id}

@@ -12,7 +12,7 @@ import {
   type DocumentData,
 } from "firebase/firestore";
 import { getFirestoreDb } from "../firebase";
-import type { Transaction, Milestone, User } from "../dummy-data";
+import type { Transaction, Milestone } from "../dummy-data";
 import { getUserProfile } from "./users";
 
 const TRANSACTIONS_COLLECTION = "transactions";

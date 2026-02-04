@@ -3,6 +3,11 @@ import {
   setDoc,
   getDoc,
   updateDoc,
+  collection,
+  getDocs,
+  limit,
+  query,
+  where,
   serverTimestamp,
 } from "firebase/firestore";
 import { getFirestoreDb } from "../firebase";
@@ -69,4 +74,45 @@ export async function updateUserProfile(
   const db = getFirestoreDb();
   const ref = doc(db, USERS_COLLECTION, uid);
   await updateDoc(ref, updates as Record<string, unknown>);
+}
+
+export async function findUserByEmail(email: string): Promise<User | null> {
+  const db = getFirestoreDb();
+  const col = collection(db, USERS_COLLECTION);
+  const q = query(col, where("email", "==", email), limit(1));
+  const snap = await getDocs(q);
+  const first = snap.docs[0];
+  if (!first) return null;
+  const d = first.data();
+  return {
+    id: first.id,
+    email: d.email ?? "",
+    name: d.name ?? "",
+    phone: d.phone ?? undefined,
+    isVerified: d.isVerified ?? false,
+    kycStatus: d.kycStatus ?? "pending",
+    role: d.role ?? "user",
+    createdAt: d.createdAt?.toDate?.()?.toISOString?.() ?? "",
+    avatarUrl: d.avatarUrl ?? undefined,
+  };
+}
+
+export async function listUsers(): Promise<User[]> {
+  const db = getFirestoreDb();
+  const col = collection(db, USERS_COLLECTION);
+  const snap = await getDocs(col);
+  return snap.docs.map((docSnap) => {
+    const d = docSnap.data();
+    return {
+      id: docSnap.id,
+      email: d.email ?? "",
+      name: d.name ?? "",
+      phone: d.phone ?? undefined,
+      isVerified: d.isVerified ?? false,
+      kycStatus: d.kycStatus ?? "pending",
+      role: d.role ?? "user",
+      createdAt: d.createdAt?.toDate?.()?.toISOString?.() ?? "",
+      avatarUrl: d.avatarUrl ?? undefined,
+    };
+  });
 }

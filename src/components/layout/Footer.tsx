@@ -11,7 +11,7 @@ export function Footer() {
           <div className="space-y-4">
             <Link href="/" className="flex items-center gap-2">
               <Shield className="h-6 w-6 text-primary" />
-              <span className="text-lg font-bold">SecureEscrow</span>
+              <span className="text-lg font-bold">Trusty Escrow</span>
             </Link>
             <p className="text-sm text-muted-foreground">
               Secure payment protection for freelancers and clients. Trust built through transparency.
@@ -47,7 +47,7 @@ export function Footer() {
         </div>
 
         <div className="mt-12 pt-8 border-t text-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} SecureEscrow. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} Trusty Escrow. All rights reserved.</p>
         </div>
       </div>
     </footer>

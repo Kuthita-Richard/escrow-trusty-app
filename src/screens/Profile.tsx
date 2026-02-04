@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,32 +9,47 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { User, Mail, Phone, Shield, Upload, CheckCircle2, Clock, AlertTriangle, Camera } from "lucide-react";
-import { currentUser } from "@/lib/dummy-data";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth-context";
+import { updateUserProfile } from "@/lib/firestore/users";
 
 export function Profile() {
-  const user = currentUser;
   const { toast } = useToast();
+  const { user, refreshProfile } = useAuth();
 
-  const [name, setName] = useState(user.name);
-  const [email, setEmail] = useState(user.email);
-  const [phone, setPhone] = useState(user.phone || "");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    setName(user?.name ?? "");
+    setEmail(user?.email ?? "");
+    setPhone(user?.phone ?? "");
+  }, [user]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
     setIsLoading(true);
 
-    setTimeout(() => {
+    try {
+      await updateUserProfile(user.id, { name, phone: phone || undefined });
+      await refreshProfile();
       toast({
         title: "Profile updated",
         description: "Your profile has been updated successfully.",
       });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to update profile.";
+      toast({ title: "Update failed", description: msg, variant: "destructive" });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
-  const getKycStatusBadge = () => {
+  const kycBadge = useMemo(() => {
+    if (!user) return null;
     switch (user.kycStatus) {
       case "approved":
         return (
@@ -61,7 +76,7 @@ export function Profile() {
           </Badge>
         );
     }
-  };
+  }, [user]);
 
   return (
     <DashboardLayout>
@@ -84,9 +99,9 @@ export function Profile() {
                 </Button>
               </div>
               <div>
-                <h2 className="text-xl font-semibold">{user.name}</h2>
-                <p className="text-muted-foreground">{user.email}</p>
-                <div className="flex items-center gap-2 mt-2">{getKycStatusBadge()}</div>
+                <h2 className="text-xl font-semibold">{user?.name ?? "User"}</h2>
+                <p className="text-muted-foreground">{user?.email ?? ""}</p>
+                <div className="flex items-center gap-2 mt-2">{kycBadge}</div>
               </div>
             </div>
           </CardContent>
@@ -180,10 +195,10 @@ export function Profile() {
                   </p>
                 </div>
               </div>
-              {getKycStatusBadge()}
+              {kycBadge}
             </div>
 
-            {user.kycStatus === "pending" && (
+            {user?.kycStatus === "pending" && (
               <>
                 <Separator />
 

@@ -12,6 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth-context";
+import { createTransaction } from "@/lib/firestore/transactions";
+import { findUserByEmail } from "@/lib/firestore/users";
 
 interface Milestone {
   id: string;
@@ -23,6 +26,7 @@ interface Milestone {
 export function NewTransaction() {
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -54,6 +58,16 @@ export function NewTransaction() {
     e.preventDefault();
     setIsLoading(true);
 
+    if (!user) {
+      toast({
+        title: "Not signed in",
+        description: "Please sign in again.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
     // Validate milestones
     const validMilestones = milestones.every((m) => m.title && parseFloat(m.amount) > 0);
 
@@ -67,15 +81,46 @@ export function NewTransaction() {
       return;
     }
 
-    // Simulate creating transaction
-    setTimeout(() => {
+    const seller = await findUserByEmail(formData.sellerEmail.trim());
+    if (!seller) {
+      toast({
+        title: "Seller not found",
+        description: "That email doesn’t belong to a registered user yet. Ask them to sign up first.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const id = await createTransaction({
+        title: formData.title,
+        description: formData.description,
+        amount: totalAmount,
+        currency: formData.currency,
+        buyerId: user.id,
+        sellerId: seller.id,
+        milestones: milestones.map((m) => ({
+          title: m.title,
+          amount: parseFloat(m.amount),
+          description: m.description,
+        })),
+      });
       toast({
         title: "Transaction created!",
         description: "The seller has been notified. Awaiting your deposit.",
       });
+      router.push(`/transactions/${id}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to create transaction.";
+      toast({
+        title: "Create failed",
+        description: msg,
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-      router.push("/transactions");
-    }, 1500);
+    }
   };
 
   return (

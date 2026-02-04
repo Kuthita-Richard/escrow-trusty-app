@@ -54,7 +54,7 @@ export function VerifyPhone() {
       <div className="w-full max-w-md">
         <Link href="/" className="flex items-center justify-center gap-2 mb-8">
           <Shield className="h-8 w-8 text-primary" />
-          <span className="text-2xl font-bold">SecureEscrow</span>
+          <span className="text-2xl font-bold">Trusty Escrow</span>
         </Link>
 
         <Card>

@@ -25,8 +25,8 @@ import {
   DollarSign,
   Plus,
 } from "lucide-react";
-import { currentUser } from "@/lib/dummy-data";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
 
 const userMenuItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -49,7 +49,7 @@ export function DashboardSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const pathname = usePathname();
-  const user = currentUser;
+  const { user } = useAuth();
 
   const isActive = (path: string) => pathname === path;
 
@@ -80,7 +80,7 @@ export function DashboardSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {user.role === "admin" && (
+        {user?.role === "admin" && (
           <SidebarGroup>
             <SidebarGroupLabel className={cn(collapsed && "sr-only")}>
               Admin

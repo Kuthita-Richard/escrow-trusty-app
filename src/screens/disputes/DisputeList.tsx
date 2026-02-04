@@ -1,21 +1,39 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { AlertTriangle, Clock, CheckCircle2, MessageSquare } from "lucide-react";
 import {
-  currentUser,
-  getDisputesByUser,
   formatDate,
   formatCurrency,
   getDisputeStatusColor,
+  type Dispute,
 } from "@/lib/dummy-data";
+import { useAuth } from "@/lib/auth-context";
+import { getDisputesByUser } from "@/lib/firestore/disputes";
 
 export function DisputeList() {
-  const user = currentUser;
-  const disputes = getDisputesByUser(user.id);
+  const { user } = useAuth();
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function run() {
+      if (!user) return;
+      setLoading(true);
+      const list = await getDisputesByUser(user.id);
+      if (!cancelled) setDisputes(list);
+      if (!cancelled) setLoading(false);
+    }
+    run().catch(() => setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -46,7 +64,9 @@ export function DisputeList() {
             <CardDescription>All disputes related to your transactions</CardDescription>
           </CardHeader>
           <CardContent>
-            {disputes.length === 0 ? (
+            {loading ? (
+              <div className="text-center py-12 text-muted-foreground">Loading disputes...</div>
+            ) : disputes.length === 0 ? (
               <div className="text-center py-12">
                 <CheckCircle2 className="h-12 w-12 text-success mx-auto mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No Disputes</h3>

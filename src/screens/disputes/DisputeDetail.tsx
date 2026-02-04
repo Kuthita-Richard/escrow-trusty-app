@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -24,23 +24,52 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import {
-  currentUser,
-  dummyDisputes,
   formatCurrency,
   formatDateTime,
   getDisputeStatusColor,
+  type Dispute,
 } from "@/lib/dummy-data";
 import { useToast } from "@/hooks/use-toast";
+import { addDisputeEvidence, addDisputeMessage, getDispute } from "@/lib/firestore/disputes";
+import { useAuth } from "@/lib/auth-context";
+import { uploadDisputeEvidenceFile } from "@/lib/storage/evidence";
 
 export function DisputeDetail() {
   const { id } = useParams();
-  const user = currentUser;
-  const dispute = dummyDisputes.find((d) => d.id === id);
+  const { user } = useAuth();
+  const [dispute, setDispute] = useState<Dispute | null>(null);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   const [newMessage, setNewMessage] = useState("");
   const [newStatement, setNewStatement] = useState("");
   const [newLink, setNewLink] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Now persists messages and evidence to Firestore/Storage.
+
+  useEffect(() => {
+    let cancelled = false;
+    async function run() {
+      if (!id) return;
+      setLoading(true);
+      const d = await getDispute(String(id));
+      if (!cancelled) setDispute(d);
+      if (!cancelled) setLoading(false);
+    }
+    run().catch(() => setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="text-center py-12 text-muted-foreground">Loading dispute...</div>
+      </DashboardLayout>
+    );
+  }
 
   if (!dispute) {
     return (
@@ -58,31 +87,97 @@ export function DisputeDetail() {
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
-    toast({
-      title: "Message sent",
-      description: "Your message has been added to the dispute thread.",
-    });
-    setNewMessage("");
+    if (!user || !dispute) return;
+    addDisputeMessage({ disputeId: dispute.id, senderId: user.id, content: newMessage.trim() })
+      .then(async () => {
+        const refreshed = await getDispute(dispute.id);
+        setDispute(refreshed);
+        toast({ title: "Message sent", description: "Your message has been added to the dispute thread." });
+        setNewMessage("");
+      })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : "Failed to send message.";
+        toast({ title: "Send failed", description: msg, variant: "destructive" });
+      });
   };
 
   const handleAddStatement = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStatement.trim()) return;
-    toast({
-      title: "Statement added",
-      description: "Your written statement has been submitted as evidence.",
-    });
-    setNewStatement("");
+    if (!user || !dispute) return;
+    addDisputeEvidence({
+      disputeId: dispute.id,
+      evidence: {
+        id: `ev-${Date.now()}`,
+        type: "statement",
+        content: newStatement.trim(),
+        uploadedBy: user.id,
+        uploadedAt: new Date().toISOString(),
+      },
+    })
+      .then(async () => {
+        const refreshed = await getDispute(dispute.id);
+        setDispute(refreshed);
+        toast({ title: "Statement added", description: "Your written statement has been submitted as evidence." });
+        setNewStatement("");
+      })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : "Failed to add statement.";
+        toast({ title: "Submit failed", description: msg, variant: "destructive" });
+      });
   };
 
   const handleAddLink = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newLink.trim()) return;
-    toast({
-      title: "Link added",
-      description: "The external link has been added as evidence.",
-    });
-    setNewLink("");
+    if (!user || !dispute) return;
+    addDisputeEvidence({
+      disputeId: dispute.id,
+      evidence: {
+        id: `ev-${Date.now()}`,
+        type: "link",
+        content: newLink.trim(),
+        uploadedBy: user.id,
+        uploadedAt: new Date().toISOString(),
+      },
+    })
+      .then(async () => {
+        const refreshed = await getDispute(dispute.id);
+        setDispute(refreshed);
+        toast({ title: "Link added", description: "The external link has been added as evidence." });
+        setNewLink("");
+      })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : "Failed to add link.";
+        toast({ title: "Submit failed", description: msg, variant: "destructive" });
+      });
+  };
+
+  const handleUploadFile = async (file: File) => {
+    if (!user || !dispute) return;
+    setIsUploading(true);
+    try {
+      const uploaded = await uploadDisputeEvidenceFile({ disputeId: dispute.id, file });
+      await addDisputeEvidence({
+        disputeId: dispute.id,
+        evidence: {
+          id: `ev-${Date.now()}`,
+          type: "file",
+          content: uploaded.url,
+          fileName: uploaded.fileName,
+          uploadedBy: user.id,
+          uploadedAt: new Date().toISOString(),
+        },
+      });
+      const refreshed = await getDispute(dispute.id);
+      setDispute(refreshed);
+      toast({ title: "File uploaded", description: "Your file has been added as evidence." });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Upload failed.";
+      toast({ title: "Upload failed", description: msg, variant: "destructive" });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const getStatusIcon = (status: string) => {
@@ -229,9 +324,23 @@ export function DisputeDetail() {
                       <div className="border-2 border-dashed rounded-lg p-6 text-center">
                         <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                         <p className="text-sm text-muted-foreground mb-2">Drag and drop files here, or click to browse</p>
-                        <Button variant="outline" size="sm">
-                          Upload Files
-                        </Button>
+                        <div className="flex items-center justify-center gap-3">
+                          <Button variant="outline" size="sm" asChild disabled={isUploading}>
+                            <label>
+                              {isUploading ? "Uploading..." : "Upload File"}
+                              <input
+                                className="hidden"
+                                type="file"
+                                onChange={(e) => {
+                                  const f = e.target.files?.[0];
+                                  if (f) void handleUploadFile(f);
+                                  // allow re-uploading same file
+                                  e.currentTarget.value = "";
+                                }}
+                              />
+                            </label>
+                          </Button>
+                        </div>
                       </div>
 
                       {/* Add Link */}

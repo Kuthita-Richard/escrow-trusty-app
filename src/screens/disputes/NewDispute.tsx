@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ArrowLeft, AlertTriangle, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { currentUser, getTransactionsByUser, formatCurrency } from "@/lib/dummy-data";
+import { formatCurrency, type Transaction } from "@/lib/dummy-data";
+import { useAuth } from "@/lib/auth-context";
+import { getTransactionsByUser } from "@/lib/firestore/transactions";
+import { createDispute } from "@/lib/firestore/disputes";
 
 export function NewDispute() {
   const router = useRouter();
@@ -19,16 +22,39 @@ export function NewDispute() {
   const searchParams = useSearchParams();
   const preselectedTransaction = searchParams.get("transaction");
 
-  const user = currentUser;
-  const transactions = getTransactionsByUser(user.id).filter((t) => !["released", "cancelled", "disputed"].includes(t.status));
+  const { user } = useAuth();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(preselectedTransaction || "");
   const [reason, setReason] = useState("");
   const [statement, setStatement] = useState("");
 
+  useEffect(() => {
+    let cancelled = false;
+    async function run() {
+      if (!user) return;
+      const txns = await getTransactionsByUser(user.id);
+      const available = txns.filter((t) => !["released", "cancelled", "disputed"].includes(t.status));
+      if (!cancelled) setTransactions(available);
+    }
+    run().catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!user) {
+      toast({
+        title: "Not signed in",
+        description: "Please sign in again.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (!selectedTransaction || !reason.trim()) {
       toast({
@@ -41,14 +67,28 @@ export function NewDispute() {
 
     setIsLoading(true);
 
-    setTimeout(() => {
+    try {
+      await createDispute({
+        transactionId: selectedTransaction,
+        openedBy: user.id,
+        reason: reason.trim(),
+        statement: statement.trim() ? statement.trim() : undefined,
+      });
       toast({
         title: "Dispute opened",
         description: "Your dispute has been submitted. Our team will review it shortly.",
       });
-      setIsLoading(false);
       router.push("/disputes");
-    }, 1500);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to open dispute.";
+      toast({
+        title: "Submit failed",
+        description: msg,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

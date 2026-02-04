@@ -127,7 +127,7 @@ export default function Landing() {
       <section id="features" className="py-20">
         <div className="container">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Why Choose SecureEscrow?</h2>
+            <h2 className="text-3xl font-bold mb-4">Why Choose Trusty Escrow?</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               We provide comprehensive protection for both buyers and sellers in every transaction.
             </p>
@@ -190,7 +190,7 @@ export default function Landing() {
                 <Users className="h-12 w-12 mx-auto opacity-80" />
                 <h2 className="text-3xl font-bold">Ready to Get Started?</h2>
                 <p className="text-lg opacity-90 max-w-2xl mx-auto">
-                  Join thousands of freelancers and clients who trust SecureEscrow for their
+                  Join thousands of freelancers and clients who trust Trusty Escrow for their
                   transactions.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">

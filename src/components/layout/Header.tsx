@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -12,25 +13,27 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Shield, User, LogOut, Settings, Bell } from "lucide-react";
-import { currentUser } from "@/lib/dummy-data";
+import { useAuth } from "@/lib/auth-context";
 
 interface HeaderProps {
   isAuthenticated?: boolean;
 }
 
 export function Header({ isAuthenticated = false }: HeaderProps) {
-  const user = currentUser;
+  const router = useRouter();
+  const { user, loading, signOut } = useAuth();
+  const authed = isAuthenticated || (!!user && !loading);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
       <div className="container flex h-16 items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
           <Shield className="h-8 w-8 text-primary" />
-          <span className="text-xl font-bold">SecureEscrow</span>
+          <span className="text-xl font-bold">Trusty Escrow</span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-6">
-          {isAuthenticated ? (
+          {authed ? (
             <>
               <Link href="/dashboard" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Dashboard
@@ -41,7 +44,7 @@ export function Header({ isAuthenticated = false }: HeaderProps) {
               <Link href="/disputes" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Disputes
               </Link>
-              {user.role === 'admin' && (
+              {user?.role === "admin" && (
                 <Link href="/admin" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                   Admin
                 </Link>
@@ -60,7 +63,7 @@ export function Header({ isAuthenticated = false }: HeaderProps) {
         </nav>
 
         <div className="flex items-center gap-4">
-          {isAuthenticated ? (
+          {authed ? (
             <>
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
@@ -73,7 +76,7 @@ export function Header({ isAuthenticated = false }: HeaderProps) {
                   <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                     <Avatar className="h-10 w-10">
                       <AvatarFallback className="bg-primary text-primary-foreground">
-                        {user.name.split(' ').map(n => n[0]).join('')}
+                        {user?.name?.split(" ").map((n) => n[0]).join("") ?? "U"}
                       </AvatarFallback>
                     </Avatar>
                   </Button>
@@ -81,8 +84,8 @@ export function Header({ isAuthenticated = false }: HeaderProps) {
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user.name}</p>
-                      <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                      <p className="text-sm font-medium leading-none">{user?.name ?? "User"}</p>
+                      <p className="text-xs leading-none text-muted-foreground">{user?.email ?? ""}</p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -99,11 +102,15 @@ export function Header({ isAuthenticated = false }: HeaderProps) {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/login" className="flex items-center text-destructive">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Log out
-                    </Link>
+                  <DropdownMenuItem
+                    className="flex items-center text-destructive cursor-pointer"
+                    onClick={async () => {
+                      await signOut();
+                      router.push("/login");
+                    }}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Log out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

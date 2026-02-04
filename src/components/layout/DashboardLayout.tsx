@@ -1,13 +1,32 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Header } from "./Header";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { useAuth } from "@/lib/auth-context";
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [loading, user, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Loading...
+      </div>
+    );
+  }
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -18,18 +19,45 @@ import {
   DollarSign,
 } from "lucide-react";
 import {
-  currentUser,
-  dummyTransactions,
   formatCurrency,
   formatDate,
   formatDateTime,
   getTransactionStatusColor,
+  type Transaction,
 } from "@/lib/dummy-data";
+import { getTransaction } from "@/lib/firestore/transactions";
+import { useAuth } from "@/lib/auth-context";
 
 export function TransactionDetail() {
   const { id } = useParams();
-  const user = currentUser;
-  const transaction = dummyTransactions.find((t) => t.id === id);
+  const { user } = useAuth();
+  const [transaction, setTransaction] = useState<Transaction | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function run() {
+      if (!id) return;
+      setLoading(true);
+      const tx = await getTransaction(String(id));
+      if (!cancelled) setTransaction(tx);
+      if (!cancelled) setLoading(false);
+    }
+    run().catch(() => setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  const isBuyer = useMemo(() => (transaction ? transaction.buyerId === user?.id : false), [transaction, user]);
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="text-center py-12 text-muted-foreground">Loading transaction...</div>
+      </DashboardLayout>
+    );
+  }
 
   if (!transaction) {
     return (
@@ -44,7 +72,6 @@ export function TransactionDetail() {
     );
   }
 
-  const isBuyer = transaction.buyerId === user.id;
   const completedMilestones = transaction.milestones.filter((m) => m.status === "completed" || m.status === "released").length;
   const progress = (completedMilestones / transaction.milestones.length) * 100;
 
